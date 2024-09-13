@@ -63,47 +63,51 @@ class Leap:
         await asyncio.sleep(random.uniform(*config.ACC_DELAY))
         logger.info(f"main | Thread {self.thread} | {self.name} | PROXY : {self.proxy}")
         while True:
-            login = await self.login()
-            if not login:
-                await self.session.close()
-                return 0
-            await asyncio.sleep(random.uniform(*config.MINI_SLEEP))
-            daily = await self.get_daily_reward()
-            if daily['can_claim']:
-                await self.claim_daily_reward()
-                
-            await asyncio.sleep(random.uniform(*config.MINI_SLEEP))
-            
-            hours = await self.get_hours_reward()
-            if hours['can_claim']:
-                await self.claim_hours_reward()
-                
-            await asyncio.sleep(random.uniform(*config.MINI_SLEEP))
-            
-            quests = await self.get_leap_quests()
-            for quest in quests:
-                if not quest['is_claimed'] and quest['name'] not in config.BLACKLIST_TASKS:
-                    await self.claim_quest(uuid=quest['uuid'])
-                    await asyncio.sleep(random.uniform(*config.MINI_SLEEP))
+            try:
+                login = await self.login()
+                if not login:
+                    await self.session.close()
+                    return 0
+                await asyncio.sleep(random.uniform(*config.MINI_SLEEP))
+                daily = await self.get_daily_reward()
+                if daily['can_claim']:
+                    await self.claim_daily_reward()
                     
-            await asyncio.sleep(random.uniform(*config.MINI_SLEEP))
+                await asyncio.sleep(random.uniform(*config.MINI_SLEEP))
+                
+                hours = await self.get_hours_reward()
+                if hours['can_claim']:
+                    await self.claim_hours_reward()
+                    
+                await asyncio.sleep(random.uniform(*config.MINI_SLEEP))
+                
+                quests = await self.get_leap_quests()
+                for quest in quests:
+                    if not quest['is_claimed'] and quest['name'] not in config.BLACKLIST_TASKS:
+                        await self.claim_quest(uuid=quest['uuid'])
+                        await asyncio.sleep(random.uniform(*config.MINI_SLEEP))
+                        
+                await asyncio.sleep(random.uniform(*config.MINI_SLEEP))
+                
+                await self.claim_ref_reward()
             
-            await self.claim_ref_reward()
-        
-            user = await self.get_user()
-            
-            await asyncio.sleep(random.uniform(*config.MINI_SLEEP))
-            
-            items = await self.get_items()
-            random.shuffle(items)
-            for item in items:
-                if item['level'] < item['max_level'] and item['upgrade_price'] <= user['points']:
-                    await self.upgrade_item(uuid=item['uuid'])
-                    user = await self.get_user()
-                    await asyncio.sleep(*config.MINI_SLEEP)
+                user = await self.get_user()
+                
+                await asyncio.sleep(random.uniform(*config.MINI_SLEEP))
+                
+                items = await self.get_items()
+                random.shuffle(items)
+                for item in items:
+                    if item['level'] < item['max_level'] and item['upgrade_price'] <= user['points']:
+                        await self.upgrade_item(uuid=item['uuid'])
+                        user = await self.get_user()
+                        await asyncio.sleep(*config.MINI_SLEEP)
 
-            logger.info(f"main | Thread {self.thread} | {self.name} | круг окончен")
-            await asyncio.sleep(random.uniform(*config.BIG_SLEEP))
+                logger.info(f"main | Thread {self.thread} | {self.name} | круг окончен")
+                await asyncio.sleep(random.uniform(*config.BIG_SLEEP))
+            except Exception as err:
+                logger.error(f"main | Thread {self.thread} | {self.name} | {err}")
+                await asyncio.sleep(random.uniform(*config.MINI_SLEEP))
     
     async def get_items(self):
         try:
