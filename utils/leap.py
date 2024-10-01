@@ -71,7 +71,7 @@ class Leap:
             daily = await self.get_daily_reward()
             
             await self.get_farewellbonus()
-            
+            await self.session.close()
             # if daily['can_claim']:
             #     await self.claim_daily_reward()
                 
