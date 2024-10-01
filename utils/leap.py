@@ -63,51 +63,51 @@ class Leap:
         await asyncio.sleep(random.uniform(*config.ACC_DELAY))
         logger.info(f"main | Thread {self.thread} | {self.name} | PROXY : {self.proxy}")
         while True:
-            try:
-                login = await self.login()
-                if not login:
-                    await self.session.close()
-                    return 0
-                await asyncio.sleep(random.uniform(*config.MINI_SLEEP))
-                daily = await self.get_daily_reward()
-                if daily['can_claim']:
-                    await self.claim_daily_reward()
-                    
-                await asyncio.sleep(random.uniform(*config.MINI_SLEEP))
-                
-                hours = await self.get_hours_reward()
-                if hours['can_claim']:
-                    await self.claim_hours_reward()
-                    
-                await asyncio.sleep(random.uniform(*config.MINI_SLEEP))
-                
-                quests = await self.get_leap_quests()
-                for quest in quests:
-                    if not quest['is_claimed'] and quest['name'] not in config.BLACKLIST_TASKS:
-                        await self.claim_quest(uuid=quest['uuid'])
-                        await asyncio.sleep(random.uniform(*config.MINI_SLEEP))
-                        
-                await asyncio.sleep(random.uniform(*config.MINI_SLEEP))
-                
-                await self.claim_ref_reward()
+            login = await self.login()
+            if not login:
+                await self.session.close()
+                return 0
+            await asyncio.sleep(random.uniform(*config.MINI_SLEEP))
+            daily = await self.get_daily_reward()
             
-                user = await self.get_user()
+            await self.get_farewellbonus()
+            
+            # if daily['can_claim']:
+            #     await self.claim_daily_reward()
                 
-                await asyncio.sleep(random.uniform(*config.MINI_SLEEP))
+            # await asyncio.sleep(random.uniform(*config.MINI_SLEEP))
+            
+            # hours = await self.get_hours_reward()
+            # if hours['can_claim']:
+            #     await self.claim_hours_reward()
                 
-                items = await self.get_items()
-                random.shuffle(items)
-                for item in items:
-                    if item['level'] < item['max_level'] and item['upgrade_price'] <= user['points']:
-                        await self.upgrade_item(uuid=item['uuid'])
-                        user = await self.get_user()
-                        await asyncio.sleep(*config.MINI_SLEEP)
+            # await asyncio.sleep(random.uniform(*config.MINI_SLEEP))
+            
+            # quests = await self.get_leap_quests()
+            # for quest in quests:
+            #     if not quest['is_claimed'] and quest['name'] not in config.BLACKLIST_TASKS:
+            #         await self.claim_quest(uuid=quest['uuid'])
+            #         await asyncio.sleep(random.uniform(*config.MINI_SLEEP))
+                    
+            # await asyncio.sleep(random.uniform(*config.MINI_SLEEP))
+            
+            # await self.claim_ref_reward()
+        
+            # user = await self.get_user()
+            
+            # await asyncio.sleep(random.uniform(*config.MINI_SLEEP))
+            
+            
+            # items = await self.get_items()
+            # random.shuffle(items)
+            # for item in items:
+            #     if item['level'] < item['max_level'] and item['upgrade_price'] <= user['points']:
+            #         await self.upgrade_item(uuid=item['uuid'])
+            #         user = await self.get_user()
+            #         await asyncio.sleep(*config.MINI_SLEEP)
 
-                logger.info(f"main | Thread {self.thread} | {self.name} | круг окончен")
-                await asyncio.sleep(random.uniform(*config.BIG_SLEEP))
-            except Exception as err:
-                logger.error(f"main | Thread {self.thread} | {self.name} | {err}")
-                await asyncio.sleep(random.uniform(*config.MINI_SLEEP))
+            logger.info(f"main | Thread {self.thread} | {self.name} | круг окончен")
+            return 0
     
     async def get_items(self):
         try:
@@ -187,6 +187,16 @@ class Leap:
         except Exception as err:
             logger.error(f"claim_daily_reward | Thread {self.thread} | {self.name} | {err}")
     
+    async def get_farewellbonus(self):
+        response = await self.session.get('https://api.leapapp.fun/api/v1/market/farewell-bonus/')
+        response = await response.json()
+        if response['is_claimed']==False and response['can_claim']==True:
+            bonus = await self.session.post('https://api.leapapp.fun/api/v1/market/farewell-bonus/')
+            bonus = await bonus.json()
+            if bonus['is_claimed']:
+                logger.success(f"claim_farewellbonus | Thread {self.thread} | {self.name} | SUCCESSFUL CLAIM {bonus['amount']} POINTS")
+                
+        
     async def get_user(self):
         try:
             response = await self.session.get('https://api.leapapp.fun/api/v1/user/')
