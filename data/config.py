@@ -23,11 +23,16 @@ CHECK_PROXY = True
 # реф код - то что идет после startapp=
 REF_CODE = '6840081105'
 
+# максимальное количество мини игр за один цикл
+MAX_GAME_PER_CYCLE = 5
+
 BLACKLIST_TASKS = {'Invite 5 friend','5 days in a row','Reach 2000 points','Reach 20 000 pt','10 days in a row','Reach 200 000 pt'}
 
+# мини задержки
 MINI_SLEEP = [2,8]
 
-BIG_SLEEP = [0*60*60,4*60*60]
+# задержка после цикла
+BIG_SLEEP = [3*60*60,8*60*60]
 
 hello ='''              _                               __  _        
  _ __    ___ | |_  _   _   __ _  ___   ___   / _|| |_  ___ 
