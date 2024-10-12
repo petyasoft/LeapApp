@@ -17,7 +17,10 @@ WORKDIR = "sessions/"
 
 # использование прокси
 USE_PROXY = True # True/False
+# проверять прокси
+CHECK_PROXY = True
 
+# реф код - то что идет после startapp=
 REF_CODE = '6840081105'
 
 BLACKLIST_TASKS = {'Invite 5 friend','5 days in a row','Reach 2000 points','Reach 20 000 pt','10 days in a row','Reach 200 000 pt'}
