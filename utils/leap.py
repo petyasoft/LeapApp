@@ -51,7 +51,7 @@ class Leap:
             'priority': 'u=1, i',
             'referer': 'https://leapapp.fun/',
             'sec-ch-ua': '"Chromium";v="122", "Not;A=Brand";v="24", "Google Chrome";v="122"',
-            'sec-ch-ua-mobile': '?0',
+            'sec-ch-ua-mobile': '?1',
             'sec-fetch-dest': 'empty',
             'sec-fetch-mode': 'cors',
             'sec-fetch-site': 'same-site',
@@ -63,51 +63,49 @@ class Leap:
         await asyncio.sleep(random.uniform(*config.ACC_DELAY))
         logger.info(f"main | Thread {self.thread} | {self.name} | PROXY : {self.proxy}")
         while True:
-            login = await self.login()
-            if not login:
-                await self.session.close()
-                return 0
-            await asyncio.sleep(random.uniform(*config.MINI_SLEEP))
-            daily = await self.get_daily_reward()
-            
-            await self.get_farewellbonus()
-            await self.session.close()
-            # if daily['can_claim']:
-            #     await self.claim_daily_reward()
-                
-            # await asyncio.sleep(random.uniform(*config.MINI_SLEEP))
-            
-            # hours = await self.get_hours_reward()
-            # if hours['can_claim']:
-            #     await self.claim_hours_reward()
-                
-            # await asyncio.sleep(random.uniform(*config.MINI_SLEEP))
-            
-            # quests = await self.get_leap_quests()
-            # for quest in quests:
-            #     if not quest['is_claimed'] and quest['name'] not in config.BLACKLIST_TASKS:
-            #         await self.claim_quest(uuid=quest['uuid'])
-            #         await asyncio.sleep(random.uniform(*config.MINI_SLEEP))
-                    
-            # await asyncio.sleep(random.uniform(*config.MINI_SLEEP))
-            
-            # await self.claim_ref_reward()
-        
-            # user = await self.get_user()
-            
-            # await asyncio.sleep(random.uniform(*config.MINI_SLEEP))
-            
-            
-            # items = await self.get_items()
-            # random.shuffle(items)
-            # for item in items:
-            #     if item['level'] < item['max_level'] and item['upgrade_price'] <= user['points']:
-            #         await self.upgrade_item(uuid=item['uuid'])
-            #         user = await self.get_user()
-            #         await asyncio.sleep(*config.MINI_SLEEP)
+            try:
+                login = await self.login()
+                if not login:
+                    await self.session.close()
+                    return 0
+                await asyncio.sleep(random.uniform(*config.MINI_SLEEP))
+                daily = await self.get_daily_reward() 
 
-            logger.info(f"main | Thread {self.thread} | {self.name} | круг окончен")
-            return 0
+                if daily['can_claim']:
+                    await self.claim_daily_reward()
+                
+                user = await self.get_user()
+                tickets = user.get('game_tickets', 0)
+                points = user.get('points', 0)
+                logger.info(f"main | Thread {self.thread} | {self.name} | Points: {points:.0f}| Current tickets: {tickets}")
+
+                if tickets < 1:
+                    logger.info(f"main | Thread {self.thread} | {self.name} | Not enough tickets left (available: {tickets}). Skipping game loop.")
+                else:
+                    if tickets > config.MAX_GAME_PER_CYCLE:
+                        tickets = config.MAX_GAME_PER_CYCLE
+                    for _ in range(tickets):
+                        game_data = await self.start_game()
+                        if game_data is None:
+                            logger.error(f"main | Thread {self.thread} | {self.name} | Failed to start the game. Breaking game loop due to error.")
+                            break
+                        else:
+                            logger.success(f"main | Thread {self.thread} | {self.name} | Successfully started game")
+                            play_time = random.uniform(65, 75)
+                            await asyncio.sleep(play_time)
+
+                            end_data = await self.end_game()
+                            if end_data is None:
+                                logger.error(f"main | Thread {self.thread} | {self.name} | Failed to end the game. Breaking game loop due to error.")
+                                break
+
+                        await asyncio.sleep(random.uniform(*config.MINI_SLEEP))
+                
+                await self.claim_ref_reward()
+                logger.info(f"main | Thread {self.thread} | {self.name} | круг окончен")
+                await asyncio.sleep(random.uniform(*config.BIG_SLEEP))
+            except Exception as err:
+                logger.error(f"main | Thread {self.thread} | {self.name} | {err}")
     
     async def get_items(self):
         try:
@@ -187,16 +185,6 @@ class Leap:
         except Exception as err:
             logger.error(f"claim_daily_reward | Thread {self.thread} | {self.name} | {err}")
     
-    async def get_farewellbonus(self):
-        response = await self.session.get('https://api.leapapp.fun/api/v1/market/farewell-bonus/')
-        response = await response.json()
-        if response['is_claimed']==False and response['can_claim']==True:
-            bonus = await self.session.post('https://api.leapapp.fun/api/v1/market/farewell-bonus/')
-            bonus = await bonus.json()
-            if bonus['is_claimed']:
-                logger.success(f"claim_farewellbonus | Thread {self.thread} | {self.name} | SUCCESSFUL CLAIM {bonus['amount']} POINTS")
-                
-        
     async def get_user(self):
         try:
             response = await self.session.get('https://api.leapapp.fun/api/v1/user/')
@@ -245,4 +233,40 @@ class Leap:
                     logger.error(f"login | Thread {self.thread} | {self.name} | USER BANNED")
                     return False
             return unquote(string=auth_url.split('tgWebAppData=')[1].split('&tgWebAppVersion')[0])
-  
+    
+    async def start_game(self):
+        try:
+            response = await self.session.post('https://api.leapapp.fun/api/v1/game/start-game/')
+            data = await response.json()
+
+            if data.get('detail') == "Game started successfully":
+                return data
+            else:
+                logger.error(f"start_game | Thread {self.thread} | {self.name} | START GAME | Unexpected response detail: {data['detail']}")
+                return None
+
+        except Exception as err:
+            logger.error(f"start_game | Thread {self.thread} | {self.name} | Error starting game: {err}")
+            return None
+
+    async def end_game(self):
+        try:
+            points = random.randint(450, 650)
+            json_data = {
+                'points': points,
+                'record': points
+            }
+
+            response = await self.session.post('https://api.leapapp.fun/api/v1/game/end-game/', json=json_data)
+            data = await response.json()
+
+            if data.get('detail') == "Game ended successfully":
+                logger.success(f"end_game | Thread {self.thread} | {self.name} | Successfully ended the game. Reward: {points}")
+                return data
+            else:
+                logger.error(f"end_game | Thread {self.thread} | {self.name} | END GAME | Unexpected response detail: {data.get('detail')}")
+                return None
+
+        except Exception as err:
+            logger.error(f"end_game | Thread {self.thread} | {self.name} | Error ending game: {err}")
+            return None
