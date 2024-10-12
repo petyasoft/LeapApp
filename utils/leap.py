@@ -77,7 +77,7 @@ class Leap:
                 user = await self.get_user()
                 tickets = user.get('game_tickets', 0)
                 points = user.get('points', 0)
-                logger.info(f"main | Thread {self.thread} | {self.name} | Points: {points:.0f}| Current tickets: {tickets}")
+                logger.info(f"main | Thread {self.thread} | {self.name} | Points: {points:.0f} | Current tickets: {tickets}")
 
                 if tickets < 1:
                     logger.info(f"main | Thread {self.thread} | {self.name} | Not enough tickets left (available: {tickets}). Skipping game loop.")
